@@ -1,0 +1,61 @@
+---
+title: "Dinheiro em Circulação"
+output:
+  html_document:
+    code_folding: hide
+    theme: spacelab
+    includes:
+      in_header: google-analytics.js
+runtime: shiny
+---
+
+```{r setup}
+load(file="bcb.RData")
+```
+
+Neste notebook vamos inspecionar os dados referente à moeda em circulação no Brasil, dados compartilhados pelo Banco Central do Brasil, no link http://www.bcb.gov.br/adm/mecir/dadosabertos/MeioCirculante_DadosAbertos.csv e que obtive através do site **dados.gov.br**, recurso http://dados.gov.br/dataset/dinheiro-em-circulacao
+
+```{r, warning=FALSE}
+maxDate <- max(data$Data)
+
+# data from most recent date
+mrData <- data[data$Data == maxDate,]
+```
+
+As informações mais atuais de circulação de moeda no Brasil são de **`r format(maxDate, format="%d/%m/%Y")`**. Para esta data, temos **`r nrow(mrData)`** diferentes famílias de moedas em circulação.
+
+As 15 famílias com maior quantidade em circulação são as seguintes:
+
+```{r, warning=FALSE}
+mrData$Total <- mrData$Denom * mrData$Quant
+
+mrData <- mrData[order(-mrData$Quant),]
+
+viewData <- data.frame(
+  Familia=substr(as.character(mrData$Familia), 1, 30),
+  Denom=format(mrData$Denom, format="f", big.mark=".", decimal.mark=",", digits=2),
+  Quant=format(mrData$Quant, format="f", big.mark=".", decimal.mark=","),
+  Total=format(mrData$Total, format="f", big.mark=".", decimal.mark=",")
+)
+
+head(viewData, 15)
+```
+
+Já as 10 famílias mais raras em circulação no Brasil são as seguintes:
+
+```{r}
+mrData <- mrData[order(mrData$Quant),]
+
+viewData <- data.frame(
+  Familia=mrData$Familia,
+  Denom=format(mrData$Denom, format="f", big.mark=".", decimal.mark=",", digits=2),
+  Quant=format(mrData$Quant, format="f", big.mark=".", decimal.mark=","),
+  Total=format(mrData$Total, format="f", big.mark=".", decimal.mark=",")
+)
+
+head(viewData, 10)
+```
+
+Eu nunca vi nenhuma destas! Se você encontrar alguma, guarde para a sua coleção!
+
+E por fim, temos que o total de moeda em circulação no Brasil é de **R\$ `r round(sum(mrData$Total) / 1E+9, 2)` bilhões**.
