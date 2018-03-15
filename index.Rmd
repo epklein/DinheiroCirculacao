@@ -11,9 +11,12 @@ runtime: shiny
 
 ```{r setup}
 load(file="bcb.RData")
+library(ggplot2)
 ```
 
 Neste notebook vamos inspecionar os dados referente à moeda em circulação no Brasil, dados compartilhados pelo Banco Central do Brasil, no link http://www.bcb.gov.br/adm/mecir/dadosabertos/MeioCirculante_DadosAbertos.csv e que obtive através do site **dados.gov.br**, recurso http://dados.gov.br/dataset/dinheiro-em-circulacao
+
+# Quantidades e valores totais
 
 ```{r, warning=FALSE}
 maxDate <- max(data$Data)
@@ -59,3 +62,35 @@ head(viewData, 10)
 Eu nunca vi nenhuma destas! Se você encontrar alguma, guarde para a sua coleção!
 
 E por fim, temos que o total de moeda em circulação no Brasil é de **R\$ `r round(sum(mrData$Total) / 1E+9, 2)` bilhões**.
+
+# Substituição de cédulas e moedas
+
+Vamos analisar a substituição de cédulas em circulação no Brasil? Ao longo dos anos a primeira família de cédulas foi sendo substuída gradualmente pelas cédulas da segunda família. Ainda existiu uma terceira família, as notas de R\$ 10 feitas de polímero. Eu me recordo vagamente delas, mas estatisticamente são insignificantes e por isso tirei do gráfico. Foi uma experiência apenas com a nota de R\$ 10, e hoje não se vê mais ela por aí...
+
+```{r, fig.width=12, fig.height=8}
+notes <- data[grepl("Cédulas - [1-9]a. família", data$Familia),]
+notes$Denom <- factor(paste("R$", as.character(notes$Denom)),
+                              labels=c("R$ 1", "R$ 2", "R$ 5", "R$ 10", "R$ 20", "R$ 50", "R$ 100"))
+
+ggplot(data=notes) +
+  geom_line(aes(x=Data, y=Quant / 1E+6, color=Denom)) +
+  facet_grid(Familia~., scales="free_y") +
+  xlab("Data") + ylab("Quantidade (milhões)") +
+  theme(legend.title=element_blank(), legend.position = "bottom")
+```
+
+No que se refere às moedas, interessante que não há registro de retirada da primeira família de moedas do mercado desde 2008. Mas não faz sentido haver 2 bilhões de moedades de 1 centavo, por exemplo, em circulação. Eu ao menos nunca mais vi esta moedinha. Quando se fala em moedas, há dezenas de versões comemorativas, que podem interessar aos colecionadores, mas aqui nas nossas estatísticas foram desprezadas.
+
+```{r, fig.width=12, fig.height=8}
+coins <- data[data$Familia %in% c("Moedas - 1a. família (inox)",
+                                  "Moedas - 2a. Família"),]
+
+coins$Denom <- factor(paste("R$", format(coins$Denom, zero.print = TRUE, decimal.mark = ",")),
+                              labels=c("R$ 0,01", "R$ 0,05", "R$ 0,10", "R$ 0,25", "R$ 0,50", "R$ 1,00"))
+
+ggplot(data=coins) +
+  geom_line(aes(x=Data, y=Quant / 1E+6, color=Denom)) +
+  facet_grid(Familia~., scales = "free_y") +
+  xlab("Data") + ylab("Quantidade (milhões)") +
+  theme(legend.title=element_blank(), legend.position = "bottom")
+```
