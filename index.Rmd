@@ -12,6 +12,9 @@ runtime: shiny
 ```{r setup}
 load(file="bcb.RData")
 library(ggplot2)
+library(scales)
+library(knitr)
+library(kableExtra)
 ```
 
 Neste notebook vamos inspecionar os dados referente à moeda em circulação no Brasil, dados compartilhados pelo Banco Central do Brasil, no link http://www.bcb.gov.br/adm/mecir/dadosabertos/MeioCirculante_DadosAbertos.csv e que obtive através do site **dados.gov.br**, recurso http://dados.gov.br/dataset/dinheiro-em-circulacao
@@ -23,40 +26,55 @@ maxDate <- max(data$Data)
 
 # data from most recent date
 mrData <- data[data$Data == maxDate,]
+mrData$Total <- mrData$Denom * mrData$Quant
 ```
 
 As informações mais atuais de circulação de moeda no Brasil são de **`r format(maxDate, format="%d/%m/%Y")`**. Para esta data, temos **`r nrow(mrData)`** diferentes famílias de moedas em circulação.
 
-As 15 famílias com maior quantidade em circulação são as seguintes:
+As 10 famílias com maior quantidade em circulação são as seguintes:
 
 ```{r, warning=FALSE}
-mrData$Total <- mrData$Denom * mrData$Quant
 
-mrData <- mrData[order(-mrData$Quant),]
+viewData <- mrData[order(-mrData$Quant),]
 
 viewData <- data.frame(
-  Familia=substr(as.character(mrData$Familia), 1, 30),
-  Denom=format(mrData$Denom, format="f", big.mark=".", decimal.mark=",", digits=2),
-  Quant=format(mrData$Quant, format="f", big.mark=".", decimal.mark=","),
-  Total=format(mrData$Total, format="f", big.mark=".", decimal.mark=",")
-)
+  'Família'=
+    substr(as.character(viewData$Familia), 1, 30),
+  'Denominação'=
+    paste("R$",
+          format(viewData$Denom, format="f", big.mark=".", decimal.mark=",", digits=2)),
+  'Quantidade'=
+    paste(format(round(viewData$Quant / 1E+9, 2), format="f", big.mark=".", decimal.mark=","), "bi"),
+  'Total'=
+    paste("R$",
+          format(round(viewData$Total / 1E+6, 2), format="f", big.mark=".", decimal.mark=","), "mi")
+  )
 
-head(viewData, 15)
+head(viewData, 10) %>%
+  kable(align = 'lrrr') %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
 ```
 
-Já as 10 famílias mais raras em circulação no Brasil são as seguintes:
+Já as 5 famílias mais raras em circulação no Brasil são as seguintes:
 
 ```{r}
-mrData <- mrData[order(mrData$Quant),]
+
+viewData <- mrData[order(mrData$Quant),]
 
 viewData <- data.frame(
-  Familia=mrData$Familia,
-  Denom=format(mrData$Denom, format="f", big.mark=".", decimal.mark=",", digits=2),
-  Quant=format(mrData$Quant, format="f", big.mark=".", decimal.mark=","),
-  Total=format(mrData$Total, format="f", big.mark=".", decimal.mark=",")
-)
+  'Família'=
+    substr(as.character(viewData$Familia), 1, 30),
+  'Denominação'=
+    paste("R$", format(viewData$Denom, format="f", big.mark=".", decimal.mark=",", digits=2)),
+  'Quantidade'=
+    format(viewData$Quant, format="f", big.mark=".", decimal.mark=","),
+  'Total'=
+    paste("R$", format(viewData$Total, format="f", big.mark=".", decimal.mark=","))
+  )
 
-head(viewData, 10)
+head(viewData, 5) %>%
+  kable(align = 'lrrr') %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
 ```
 
 Eu nunca vi nenhuma destas! Se você encontrar alguma, guarde para a sua coleção!
@@ -69,28 +87,39 @@ Vamos analisar a substituição de cédulas em circulação no Brasil? Ao longo 
 
 ```{r, fig.width=12, fig.height=8}
 notes <- data[grepl("Cédulas - [1-9]a. família", data$Familia),]
-notes$Denom <- factor(paste("R$", as.character(notes$Denom)),
-                              labels=c("R$ 1", "R$ 2", "R$ 5", "R$ 10", "R$ 20", "R$ 50", "R$ 100"))
+
+notes$Denom <-
+  factor(notes$Denom,
+         levels=c(1, 2, 5, 10, 20, 50, 100),
+         labels=c("R$ 1", "R$ 2", "R$ 5", "R$ 10", "R$ 20", "R$ 50", "R$ 100"))
 
 ggplot(data=notes) +
   geom_line(aes(x=Data, y=Quant / 1E+6, color=Denom)) +
   facet_grid(Familia~., scales="free_y") +
   xlab("Data") + ylab("Quantidade (milhões)") +
-  theme(legend.title=element_blank(), legend.position = "bottom")
+  scale_x_date(labels = date_format("%Y"), breaks = date_breaks("year")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.title=element_blank(),
+        legend.position = "bottom")
 ```
 
-No que se refere às moedas, interessante que não há registro de retirada da primeira família de moedas do mercado desde 2008. Mas não faz sentido haver 2 bilhões de moedades de 1 centavo, por exemplo, em circulação. Eu ao menos nunca mais vi esta moedinha. Quando se fala em moedas, há dezenas de versões comemorativas, que podem interessar aos colecionadores, mas aqui nas nossas estatísticas foram desprezadas.
+No que se refere às moedas, interessante que não há registro de retirada da primeira família de moedas do mercado desde 2008. Mas não faz sentido haver 2 bilhões de moedades de 1 centavo, por exemplo, em circulação. Eu ao menos nunca mais vi esta moedinha. Quando se fala em moedas, há dezenas de versões comemorativas, que podem interessar aos colecionadores, mas aqui nas nossas estatísticas foram desconsideradas.
 
-```{r, fig.width=12, fig.height=8}
-coins <- data[data$Familia %in% c("Moedas - 1a. família (inox)",
+```{r, fig.width=12, fig.height=8} 
+coins <- data[data$Familia %in% c("Moedas - 1a. Família (inox)",
                                   "Moedas - 2a. Família"),]
 
-coins$Denom <- factor(paste("R$", format(coins$Denom, zero.print = TRUE, decimal.mark = ",")),
-                              labels=c("R$ 0,01", "R$ 0,05", "R$ 0,10", "R$ 0,25", "R$ 0,50", "R$ 1,00"))
+coins$Denom <-
+  factor(coins$Denom,
+         levels=c(0.01, 0.05, 0.10, 0.25, 0.5, 1),
+         labels=c("R$ 0,01", "R$ 0,05", "R$ 0,10", "R$ 0,25", "R$ 0,50", "R$ 1,00"))
 
 ggplot(data=coins) +
   geom_line(aes(x=Data, y=Quant / 1E+6, color=Denom)) +
   facet_grid(Familia~., scales = "free_y") +
   xlab("Data") + ylab("Quantidade (milhões)") +
-  theme(legend.title=element_blank(), legend.position = "bottom")
+  scale_x_date(labels = date_format("%Y"), breaks = date_breaks("year")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.title=element_blank(),
+        legend.position = "bottom")
 ```
