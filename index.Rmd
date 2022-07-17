@@ -4,8 +4,6 @@ output:
   html_document:
     code_folding: hide
     theme: spacelab
-    includes:
-      in_header: google-analytics.js
 runtime: shiny
 ---
 
@@ -17,7 +15,7 @@ library(knitr)
 library(kableExtra)
 ```
 
-Neste notebook vamos inspecionar os dados referente à moeda em circulação no Brasil, dados compartilhados pelo Banco Central do Brasil, no link http://www.bcb.gov.br/adm/mecir/dadosabertos/MeioCirculante_DadosAbertos.csv e que obtive através do site **dados.gov.br**, recurso http://dados.gov.br/dataset/dinheiro-em-circulacao
+Neste notebook vamos inspecionar os dados referentes à moeda em circulação no Brasil, dados compartilhados pelo Banco Central do Brasil, no link http://www.bcb.gov.br/adm/mecir/dadosabertos/MeioCirculante_DadosAbertos.csv e que obtive através do site **dados.gov.br**, recurso http://dados.gov.br/dataset/dinheiro-em-circulacao
 
 # Quantidades e valores totais
 
@@ -90,8 +88,8 @@ notes <- data[grepl("Cédulas - [1-9]a. família", data$Familia),]
 
 notes$Denom <-
   factor(notes$Denom,
-         levels=c(1, 2, 5, 10, 20, 50, 100),
-         labels=c("R$ 1", "R$ 2", "R$ 5", "R$ 10", "R$ 20", "R$ 50", "R$ 100"))
+         levels=c(1, 2, 5, 10, 20, 50, 100, 200),
+         labels=c("R$ 1", "R$ 2", "R$ 5", "R$ 10", "R$ 20", "R$ 50", "R$ 100", "R$ 200"))
 
 ggplot(data=notes) +
   geom_line(aes(x=Data, y=Quant / 1E+6, color=Denom)) +
